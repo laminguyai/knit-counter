@@ -313,15 +313,15 @@
 <div class="topbar">
   <div class="left-col">
     <div class="row-area">
-      <button class="row-chip" id="rowBtn" aria-label="設定起始行數">行 <span id="rowVal">0</span></button>
-      <input class="row-input" id="rowInput" type="number" inputmode="numeric" min="0" placeholder="起始行" style="display:none" aria-label="起始行數">
+      <button class="row-chip" id="rowBtn" aria-label="修改針數">針 <span id="rowVal">0</span></button>
+      <input class="row-input" id="rowInput" type="number" inputmode="numeric" min="0" placeholder="針數" style="display:none" aria-label="針數">
     </div>
-    <div class="dir-switch" role="group" aria-label="行數遞增或遞減">
-      <button class="dir-key on" id="dirUp" aria-label="行遞增">
+    <div class="dir-switch" role="group" aria-label="針數遞增或遞減">
+      <button class="dir-key on" id="dirUp" aria-label="針遞增">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4.5 L18.5 12.5 H14.5 V19 H9.5 V12.5 H5.5 Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
       </button>
       <div class="dir-divider"></div>
-      <button class="dir-key" id="dirDown" aria-label="行遞減">
+      <button class="dir-key" id="dirDown" aria-label="針遞減">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19.5 L5.5 11.5 H9.5 V5 H14.5 V11.5 H18.5 Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -337,8 +337,8 @@
 
 <div class="display">
   <div class="count-wrap" id="countWrap">
-    <input id="countInput" type="number" inputmode="numeric" min="0" value="0" aria-label="目前針數">
-    <div class="count-label">針</div>
+    <input id="countInput" type="number" inputmode="numeric" min="0" value="0" aria-label="目前行數">
+    <div class="count-label">行</div>
   </div>
   <div class="voice-status" id="voiceStatus">聲控關閉</div>
 </div>
@@ -357,7 +357,7 @@
 </div>
 
 <div class="hint">
-  點數字改針數 · 點「行」設起始行 · 聲控：「加一」「減一」「重設」<br>
+  點數字改行數 · 點「針」改針數 · 聲控：「加一」「減一」「重設」<br>
   自定義提示：5＝5 的倍數 · 10,25,40＝指定數字 · 3+6＝第 3 行起每 6 行
   <select class="lang-select" id="langSelect" aria-label="聲控語言">
     <option value="zh-HK">廣東話</option>
@@ -366,7 +366,7 @@
   </select>
 </div>
 
-<div class="version">v3</div>
+<div class="version">v4</div>
 
 <script>
 (function () {
@@ -440,12 +440,12 @@
     return rule.nums.indexOf(c) !== -1;
   }
 
-  /* ---------- row counter（行） ---------- */
+  /* ---------- 針數（左上角，隨規則遞增減） ---------- */
   var startRow = 0;
   var rowDir = 'up';
   try {
     var sr = parseInt(localStorage.getItem('knitStartRow'), 10);
-    if (!isNaN(sr) && sr >= 0) startRow = sr;
+    if (!isNaN(sr)) startRow = sr;
     if (localStorage.getItem('knitRowDir') === 'down') rowDir = 'down';
   } catch (e) {}
 
@@ -462,7 +462,8 @@
 
   function currentRow() {
     var h = hitsUpTo(count);
-    return rowDir === 'down' ? startRow - h : startRow + h;
+    var v = rowDir === 'down' ? startRow - h : startRow + h;
+    return Math.max(0, v); /* 遞減到底後繼續顯示 0，不出現負數 */
   }
 
   function renderRow() {
@@ -526,18 +527,21 @@
     countInput.blur();
   });
 
-  /* ---------- 起始行設定 ---------- */
+  /* ---------- 針數手動設定 ---------- */
   rowBtn.addEventListener('click', function () {
     rowBtn.style.display = 'none';
     rowInput.style.display = 'block';
-    rowInput.value = String(startRow);
+    rowInput.value = String(currentRow());
     rowInput.focus();
   });
 
   function closeRowInput(save) {
     if (save) {
       var v = parseInt(rowInput.value, 10);
-      startRow = (isNaN(v) || v < 0) ? 0 : v;
+      if (isNaN(v) || v < 0) v = 0;
+      /* 輸入的是目前針數，反推起始值，之後遞增減邏輯不變 */
+      var h = hitsUpTo(count);
+      startRow = rowDir === 'down' ? v + h : v - h;
       try { localStorage.setItem('knitStartRow', String(startRow)); } catch (e) {}
       render();
     }
@@ -549,7 +553,7 @@
   rowInput.addEventListener('change', function () { closeRowInput(true); });
   rowInput.addEventListener('blur', function () { closeRowInput(false); });
 
-  /* ---------- 行數方向切換 ---------- */
+  /* ---------- 針數方向切換 ---------- */
   function setRowDir(dir) {
     if (rowDir === dir) return;
     rowDir = dir;
