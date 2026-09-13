@@ -43,72 +43,34 @@
   /* ---------- top bar ---------- */
   .topbar {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     padding: 14px 0 4px;
   }
-  .left-col {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .dir-switch {
-    display: flex;
-    flex-direction: column;
-    background: var(--surface);
+  .startnum-chip {
     border: 1.5px solid var(--hairline);
-    border-radius: 14px;
-    overflow: hidden;
-  }
-  .dir-key {
-    width: 52px;
-    height: 44px;
-    border: none;
-    background: transparent;
+    background: var(--surface);
     color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border-radius: 12px;
+    padding: 8px 16px;
+    min-height: 48px;
     cursor: pointer;
-    touch-action: manipulation;
-    transition: background 0.15s;
-  }
-  .dir-key.on { background: var(--blue); }
-  .dir-key:active { transform: scale(0.94); }
-  .dir-divider { height: 1.5px; background: var(--hairline); }
-  .stat-card {
-    background: var(--surface);
-    border: 1.5px solid var(--hairline);
-    border-radius: 14px;
-    overflow: hidden;
-    min-width: 132px;
-  }
-  .stat-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 7px 14px;
-    border: none;
-    background: transparent;
-    width: 100%;
-    color: var(--ink);
-    font: inherit;
-    text-align: left;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+    font-size: 15px;
+    font-weight: 700;
+    touch-action: manipulation;
   }
-  button.stat-row { cursor: pointer; touch-action: manipulation; min-height: 44px; }
-  button.stat-row:active { background: var(--cream); }
-  .stat-label { font-size: 13px; color: var(--muted); font-weight: 600; }
-  .stat-val {
+  .startnum-chip span.num {
     font-family: "Arial Rounded MT Bold", -apple-system, BlinkMacSystemFont, "PingFang HK", "PingFang TC", sans-serif;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     line-height: 1;
   }
-  .stat-total { border-top: 1.5px solid var(--hairline); }
-  .stat-total .stat-label { color: var(--ink); }
+  .startnum-chip .unit { color: var(--muted); font-size: 14px; font-weight: 600; }
   .row-input {
     width: 120px;
     text-align: center;
@@ -316,29 +278,8 @@
 <body>
 
 <div class="topbar">
-  <div class="left-col">
-    <div class="stat-card" id="statCard">
-      <button class="stat-row" id="startNumBtn" aria-label="設定起始數">
-        <span class="stat-label">起始數</span><span class="stat-val" id="startNumVal">0</span>
-      </button>
-      <div class="stat-row">
-        <span class="stat-label">針</span><span class="stat-val" id="rowVal">0</span>
-      </div>
-      <div class="stat-row stat-total">
-        <span class="stat-label">總針數</span><span class="stat-val" id="totalVal">0</span>
-      </div>
-    </div>
-    <input class="row-input" id="rowInput" type="number" inputmode="numeric" min="0" placeholder="起始數" style="display:none" aria-label="起始數">
-    <div class="dir-switch" role="group" aria-label="針數遞增或遞減">
-      <button class="dir-key on" id="dirUp" aria-label="針遞增">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4.5 L18.5 12.5 H14.5 V19 H9.5 V12.5 H5.5 Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-      </button>
-      <div class="dir-divider"></div>
-      <button class="dir-key" id="dirDown" aria-label="針遞減">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19.5 L5.5 11.5 H9.5 V5 H14.5 V11.5 H18.5 Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-      </button>
-    </div>
-  </div>
+  <button class="startnum-chip" id="startNumBtn" aria-label="設定起始數"><span class="num" id="startNumVal">0</span><span class="unit">/針</span></button>
+  <input class="row-input" id="rowInput" type="number" inputmode="numeric" min="0" placeholder="起始數" style="display:none" aria-label="起始數">
   <button class="mic-btn" id="micBtn" aria-label="聲控開關" aria-pressed="false">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <rect x="9" y="2.5" width="6" height="11" rx="3"/>
@@ -379,7 +320,7 @@
   </select>
 </div>
 
-<div class="version">v5</div>
+<div class="version">v6</div>
 
 <script>
 (function () {
@@ -397,12 +338,9 @@
   var multiInput = document.getElementById('multiInput');
   var dirUp = document.getElementById('dirUp');
   var dirDown = document.getElementById('dirDown');
-  var statCard = document.getElementById('statCard');
   var startNumBtn = document.getElementById('startNumBtn');
   var startNumVal = document.getElementById('startNumVal');
-  var totalVal = document.getElementById('totalVal');
   var rowInput = document.getElementById('rowInput');
-  var rowVal = document.getElementById('rowVal');
 
   /* ---------- state ---------- */
   var count = 0;
@@ -456,46 +394,12 @@
     return rule.nums.indexOf(c) !== -1;
   }
 
-  /* ---------- 針數（左上角，隨規則遞增減） ---------- */
-  var startRow = 0;
-  var rowDir = 'up';
+  /* ---------- 起始數（固定值，點左上角輸入） ---------- */
   var startNum = 0;
   try {
-    var sr = parseInt(localStorage.getItem('knitStartRow'), 10);
-    if (!isNaN(sr)) startRow = sr;
-    if (localStorage.getItem('knitRowDir') === 'down') rowDir = 'down';
     var sn = parseInt(localStorage.getItem('knitStartNum'), 10);
     if (!isNaN(sn) && sn >= 0) startNum = sn;
   } catch (e) {}
-
-  function hitsUpTo(c) {
-    if (!rule || c <= 0) return 0;
-    if (rule.type === 'multiple') return Math.floor(c / rule.n);
-    if (rule.type === 'offset') return c >= rule.start ? Math.floor((c - rule.start) / rule.step) + 1 : 0;
-    var k = 0;
-    for (var i = 0; i < rule.nums.length; i++) {
-      if (rule.nums[i] <= c) k++;
-    }
-    return k;
-  }
-
-  function currentRow() {
-    var h = hitsUpTo(count);
-    var v = rowDir === 'down' ? startRow - h : startRow + h;
-    return Math.max(0, v); /* 遞減到底後繼續顯示 0，不出現負數 */
-  }
-
-  function renderRow() {
-    var sv = currentRow();
-    rowVal.textContent = String(sv);
-    startNumVal.textContent = String(startNum);
-    totalVal.textContent = String(startNum + sv);
-  }
-
-  function renderDir() {
-    dirUp.classList.toggle('on', rowDir !== 'down');
-    dirDown.classList.toggle('on', rowDir === 'down');
-  }
 
   /* ---------- render ---------- */
   function render() {
@@ -507,7 +411,7 @@
     } else {
       countInput.classList.remove('hit');
     }
-    renderRow();
+    startNumVal.textContent = String(startNum);
     try { localStorage.setItem('knitCount', String(count)); } catch (e) {}
   }
 
@@ -551,7 +455,7 @@
 
   /* ---------- 起始數設定（固定值） ---------- */
   startNumBtn.addEventListener('click', function () {
-    statCard.style.display = 'none';
+    startNumBtn.style.display = 'none';
     rowInput.style.display = 'block';
     rowInput.value = String(startNum);
     rowInput.focus();
@@ -566,22 +470,11 @@
     }
     rowInput.style.display = 'none';
     rowInput.blur();
-    statCard.style.display = '';
+    startNumBtn.style.display = '';
   }
 
   rowInput.addEventListener('change', function () { closeRowInput(true); });
   rowInput.addEventListener('blur', function () { closeRowInput(false); });
-
-  /* ---------- 針數方向切換 ---------- */
-  function setRowDir(dir) {
-    if (rowDir === dir) return;
-    rowDir = dir;
-    try { localStorage.setItem('knitRowDir', rowDir); } catch (e) {}
-    renderDir();
-    render();
-  }
-  dirUp.addEventListener('click', function () { setRowDir('up'); });
-  dirDown.addEventListener('click', function () { setRowDir('down'); });
 
   /* ---------- 自定義提示規則 ---------- */
   function renderMultiple() {
@@ -620,7 +513,6 @@
 
   render();
   renderMultiple();
-  renderDir();
 
   /* ---------- keep screen awake ---------- */
   var wakeLock = null;
