@@ -191,6 +191,48 @@
   .btn-blue { background: var(--blue); }
   .btn-pink { background: var(--pink); }
 
+  /* ---------- custom multiple ---------- */
+  .multi-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 40px;
+    padding-bottom: 4px;
+  }
+  .multi-pill {
+    border: 1.5px solid var(--hairline);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 18px;
+    min-height: 40px;
+    cursor: pointer;
+    touch-action: manipulation;
+    max-width: 72vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .multi-pill.on {
+    background: var(--yellow);
+    border-color: var(--yellow);
+  }
+  .multi-input {
+    width: 210px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1.5px solid var(--ink);
+    background: var(--surface);
+    color: var(--ink);
+    outline: none;
+  }
+  #countInput.hit { color: var(--red); }
+
   /* ---------- footer ---------- */
   .hint {
     font-size: 13px;
@@ -241,6 +283,11 @@
   </div>
 </div>
 
+<div class="multi-row">
+  <button class="multi-pill" id="multiBtn">自定義提示：關</button>
+  <input class="multi-input" id="multiInput" type="text" placeholder="5 / 10,25,40 / 3+6" style="display:none" aria-label="自定義提示規則">
+</div>
+
 <div class="controls">
   <button class="btn btn-primary" id="plusBtn">＋1</button>
   <div class="btn-row">
@@ -250,7 +297,8 @@
 </div>
 
 <div class="hint">
-  點數字可直接輸入 · 聲控：「加一」＋1 ·「減一」−1 ·「重設」歸零
+  點數字可直接輸入 · 聲控：「加一」＋1 ·「減一」−1 ·「重設」歸零<br>
+  自定義提示：5＝5 的倍數 · 10,25,40＝指定數字 · 3+6＝第 3 行起每 6 行
   <select class="lang-select" id="langSelect" aria-label="聲控語言">
     <option value="zh-HK">廣東話</option>
     <option value="zh-TW">國語</option>
@@ -272,6 +320,8 @@
   var langSelect = document.getElementById('langSelect');
   var lapText = document.getElementById('lapText');
   var ringSvg = document.getElementById('ringSvg');
+  var multiBtn = document.getElementById('multiBtn');
+  var multiInput = document.getElementById('multiInput');
 
   /* ---------- progress ring ---------- */
   var CX = 160, CY = 160, R = 116;
@@ -342,6 +392,11 @@
     } else {
       lapText.style.display = 'none';
     }
+    if (isHit(count)) {
+      countInput.classList.add('hit');
+    } else {
+      countInput.classList.remove('hit');
+    }
     updateRing();
     try { localStorage.setItem('knitCount', String(count)); } catch (e) {}
   }
@@ -356,6 +411,86 @@
     }
   }
 
+  /* ---------- custom highlight rule ----------
+     支援三種格式：
+     5        → 5 的倍數（5, 10, 15…）
+     10,25,40 → 指定數字
+     3+6      → 由 3 開始，之後每隔 6（3, 9, 15…） */
+  var ruleStr = '';
+  var rule = null;
+  try {
+    ruleStr = localStorage.getItem('knitRule') || '';
+    if (!ruleStr) {
+      var legacy = parseInt(localStorage.getItem('knitMultiple'), 10);
+      if (legacy >= 2) ruleStr = String(legacy);
+    }
+  } catch (e) {}
+
+  function parseRule(str) {
+    var s = String(str || '').trim();
+    if (!s) return null;
+    var m = s.match(/^(\d+)\s*[+＋/／]\s*(\d+)$/);
+    if (m) {
+      var start = parseInt(m[1], 10), step = parseInt(m[2], 10);
+      if (start > 0 && step >= 1) return { type: 'offset', start: start, step: step };
+      return null;
+    }
+    var parts = s.split(/[,，、\s]+/).filter(function (p) { return p !== ''; });
+    if (parts.length > 1) {
+      var nums = [];
+      for (var i = 0; i < parts.length; i++) {
+        var v = parseInt(parts[i], 10);
+        if (!isNaN(v) && v > 0) nums.push(v);
+      }
+      return nums.length ? { type: 'list', nums: nums } : null;
+    }
+    var n = parseInt(s, 10);
+    if (!isNaN(n) && n >= 2) return { type: 'multiple', n: n };
+    return null;
+  }
+  rule = parseRule(ruleStr);
+
+  function isHit(c) {
+    if (!rule || c <= 0) return false;
+    if (rule.type === 'multiple') return c % rule.n === 0;
+    if (rule.type === 'offset') return c >= rule.start && (c - rule.start) % rule.step === 0;
+    return rule.nums.indexOf(c) !== -1;
+  }
+
+  function renderMultiple() {
+    if (rule) {
+      multiBtn.textContent = '自定義提示：' + ruleStr;
+      multiBtn.classList.add('on');
+    } else {
+      multiBtn.textContent = '自定義提示：關';
+      multiBtn.classList.remove('on');
+    }
+  }
+
+  multiBtn.addEventListener('click', function () {
+    multiBtn.style.display = 'none';
+    multiInput.style.display = 'block';
+    multiInput.value = rule ? ruleStr : '';
+    multiInput.focus();
+  });
+
+  function closeMultiInput(save) {
+    if (save) {
+      var parsed = parseRule(multiInput.value);
+      ruleStr = parsed ? String(multiInput.value).trim() : '';
+      rule = parsed;
+      try { localStorage.setItem('knitRule', ruleStr); } catch (e) {}
+      renderMultiple();
+      render();
+    }
+    multiInput.style.display = 'none';
+    multiInput.blur();
+    multiBtn.style.display = '';
+  }
+
+  multiInput.addEventListener('change', function () { closeMultiInput(true); });
+  multiInput.addEventListener('blur', function () { closeMultiInput(false); });
+
   plusBtn.addEventListener('click', function () { setCount(count + 1); });
   minusBtn.addEventListener('click', function () { setCount(count - 1); });
   resetBtn.addEventListener('click', function () { setCount(0); });
@@ -368,6 +503,7 @@
   });
 
   render();
+  renderMultiple();
 
   /* ---------- keep screen awake ---------- */
   var wakeLock = null;
@@ -391,29 +527,40 @@
     voiceStatus.innerHTML = html;
   }
 
-  function handleCommand(rawText) {
-    var t = String(rawText || '').toLowerCase().replace(/[\s，。！？!?,\.]/g, '');
-    if (!t) return;
-    setStatus('聽到：<span class="heard">' + String(rawText).replace(/</g, '&lt;') + '</span>');
+  var firedThisSession = false;
 
+  function normalize(rawText) {
+    return String(rawText || '').toLowerCase().replace(/[\s，。！？!?,\.]/g, '');
+  }
+
+  function matchCommand(t) {
+    if (!t) return null;
     var plusWords = ['加一', '加1', '加', '一', '多一', 'next', 'plus', 'add', 'one', '+1'];
     var minusWords = ['減一', '減1', '減', '少一', 'minus', 'back', 'undo'];
     var resetWords = ['重設', '清零', '歸零', 'reset', 'clear', 'zero'];
-
     var i;
     for (i = 0; i < resetWords.length; i++) {
-      if (t.indexOf(resetWords[i]) !== -1) { setCount(0); return; }
+      if (t.indexOf(resetWords[i]) !== -1) return 'reset';
     }
     for (i = 0; i < minusWords.length; i++) {
-      if (t.indexOf(minusWords[i]) !== -1) { setCount(count - 1); return; }
+      if (t.indexOf(minusWords[i]) !== -1) return 'minus';
     }
     for (i = 0; i < plusWords.length; i++) {
-      if (t.indexOf(plusWords[i]) !== -1) { setCount(count + 1); return; }
+      if (t.indexOf(plusWords[i]) !== -1) return 'plus';
     }
+    return null;
+  }
+
+  function fireCommand(cmd, rawText) {
+    setStatus('聽到：<span class="heard">' + String(rawText).replace(/</g, '&lt;') + '</span>');
+    if (cmd === 'reset') setCount(0);
+    else if (cmd === 'minus') setCount(count - 1);
+    else setCount(count + 1);
   }
 
   function startRec() {
     if (!rec || isRunning) return;
+    firedThisSession = false;
     try {
       rec.start();
       isRunning = true;
@@ -439,10 +586,20 @@
     rec.maxAlternatives = 1;
 
     rec.onresult = function (ev) {
+      var latest = '';
       for (var i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) {
-          handleCommand(ev.results[i][0].transcript);
+        latest = ev.results[i][0].transcript;
+        var cmd = matchCommand(normalize(latest));
+        if (cmd && !firedThisSession) {
+          firedThisSession = true;
+          fireCommand(cmd, latest);
+          /* 觸發後立即中止本段，onend 會自動重啟，免除等待靜音判定 */
+          try { rec.abort(); } catch (e) {}
+          return;
         }
+      }
+      if (latest) {
+        setStatus('辨識中：<span class="heard">' + String(latest).replace(/</g, '&lt;') + '</span>');
       }
     };
     rec.onend = function () {
