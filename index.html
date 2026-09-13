@@ -43,10 +43,40 @@
   /* ---------- top bar ---------- */
   .topbar {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     padding: 14px 0 4px;
   }
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .dir-switch {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1.5px solid var(--hairline);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .dir-key {
+    width: 52px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.15s;
+  }
+  .dir-key.on { background: var(--blue); }
+  .dir-key:active { transform: scale(0.94); }
+  .dir-divider { height: 1.5px; background: var(--hairline); }
   .row-area {
     display: flex;
     align-items: center;
@@ -281,9 +311,20 @@
 <body>
 
 <div class="topbar">
-  <div class="row-area">
-    <button class="row-chip" id="rowBtn" aria-label="設定起始行數">行 <span id="rowVal">0</span></button>
-    <input class="row-input" id="rowInput" type="number" inputmode="numeric" min="0" placeholder="起始行" style="display:none" aria-label="起始行��">
+  <div class="left-col">
+    <div class="row-area">
+      <button class="row-chip" id="rowBtn" aria-label="設定起始行數">行 <span id="rowVal">0</span></button>
+      <input class="row-input" id="rowInput" type="number" inputmode="numeric" min="0" placeholder="起始行" style="display:none" aria-label="起始行數">
+    </div>
+    <div class="dir-switch" role="group" aria-label="行數遞增或遞減">
+      <button class="dir-key on" id="dirUp" aria-label="行遞增">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4.5 L18.5 12.5 H14.5 V19 H9.5 V12.5 H5.5 Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dir-divider"></div>
+      <button class="dir-key" id="dirDown" aria-label="行遞減">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19.5 L5.5 11.5 H9.5 V5 H14.5 V11.5 H18.5 Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
   </div>
   <button class="mic-btn" id="micBtn" aria-label="聲控開關" aria-pressed="false">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -305,7 +346,6 @@
 <div class="multi-row">
   <button class="multi-pill" id="multiBtn">自定義提示：關</button>
   <input class="multi-input" id="multiInput" type="text" placeholder="5 / 10,25,40 / 3+6" style="display:none" aria-label="自定義提示規則">
-  <button class="multi-pill" id="dirBtn" aria-label="行數遞增或遞減">行：遞增</button>
 </div>
 
 <div class="controls">
@@ -326,7 +366,7 @@
   </select>
 </div>
 
-<div class="version">v2</div>
+<div class="version">v3</div>
 
 <script>
 (function () {
@@ -342,7 +382,8 @@
   var langSelect = document.getElementById('langSelect');
   var multiBtn = document.getElementById('multiBtn');
   var multiInput = document.getElementById('multiInput');
-  var dirBtn = document.getElementById('dirBtn');
+  var dirUp = document.getElementById('dirUp');
+  var dirDown = document.getElementById('dirDown');
   var rowBtn = document.getElementById('rowBtn');
   var rowInput = document.getElementById('rowInput');
   var rowVal = document.getElementById('rowVal');
@@ -429,7 +470,8 @@
   }
 
   function renderDir() {
-    dirBtn.textContent = rowDir === 'down' ? '行：遞減' : '行：遞增';
+    dirUp.classList.toggle('on', rowDir !== 'down');
+    dirDown.classList.toggle('on', rowDir === 'down');
   }
 
   /* ---------- render ---------- */
@@ -508,12 +550,15 @@
   rowInput.addEventListener('blur', function () { closeRowInput(false); });
 
   /* ---------- 行數方向切換 ---------- */
-  dirBtn.addEventListener('click', function () {
-    rowDir = rowDir === 'down' ? 'up' : 'down';
+  function setRowDir(dir) {
+    if (rowDir === dir) return;
+    rowDir = dir;
     try { localStorage.setItem('knitRowDir', rowDir); } catch (e) {}
     renderDir();
     render();
-  });
+  }
+  dirUp.addEventListener('click', function () { setRowDir('up'); });
+  dirDown.addEventListener('click', function () { setRowDir('down'); });
 
   /* ---------- 自定義提示規則 ---------- */
   function renderMultiple() {
